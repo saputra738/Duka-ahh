@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Data Parkir Kendaraan</title>
+  <style>
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #999; padding: 5px; text-align: center; }
+    input, select { width: 95%; padding: 4px; }
+    button { margin: 2px; }
+  </style>
+</head>
+<body>
+  <h2>Data Parkir Kendaraan</h2>
+  <table id="tabelParkir">
+    <thead>
+      <tr>
+        <th>No</th>
+        <th>Nomor Plat</th>
+        <th>Jenis</th>
+        <th>Jam Masuk</th>
+        <th>Jam Keluar</th>
+        <th>Biaya</th>
+        <th>Aksi</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+  <button onclick="hapusSemua()">Hapus Semua Data</button>
+
+  <script>
+    const tbody = document.querySelector("#tabelParkir tbody");
+    const totalBaris = 100;
+
+    function waktuSekarang() {
+      const d = new Date();
+      return d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0');
+    }
+
+    function hitungDurasi(jamMasuk, jamKeluar) {
+      const [jm, mm] = jamMasuk.split(':').map(Number);
+      const [jk, mk] = jamKeluar.split(':').map(Number);
+      const masuk = jm + mm / 60;
+      const keluar = jk + mk / 60;
+      let durasi = keluar - masuk;
+      return Math.max(1, Math.ceil(durasi)); // Minimal 1 jam
+    }
+
+    function hitungBiaya(jenis, durasi) {
+      if (jenis === "Mobil") {
+        return 3000 + ((durasi - 1) * 2000);
+      } else {
+        return 2000 + ((durasi - 1) * 1000);
+      }
+    }
+
+    function simpanData() {
+      const data = [];
+      tbody.querySelectorAll("tr").forEach(row => {
+        data.push({
+          plat: row.cells[1].querySelector("input").value,
+          jenis: row.cells[2].querySelector("select").value,
+          masuk: row.cells[3].querySelector("input").value,
+          keluar: row.cells[4].querySelector("input").value,
+          biaya: row.cells[5].querySelector("input").value
+        });
+      });
+      localStorage.setItem("dataParkir", JSON.stringify(data));
+    }
+
+    function loadData() {
+      const simpanan = JSON.parse(localStorage.getItem("dataParkir")) || [];
+
+      for (let i = 0; i < totalBaris; i++) {
+        const row = tbody.insertRow();
+        row.insertCell().textContent = i + 1;
+
+        const inputPlat = document.createElement("input");
+        inputPlat.value = simpanan[i]?.plat || "";
+        inputPlat.addEventListener("input", () => {
+          if (inputPlat.value.trim()) inputMasuk.value = waktuSekarang();
+          simpanData();
+        });
+
+        const selectJenis = document.createElement("select");
+        selectJenis.innerHTML = `
+          <option value="Mobil">Mobil</option>
+          <option value="Motor">Motor</option>
+        `;
+        selectJenis.value = simpanan[i]?.jenis || "Mobil";
+        selectJenis.onchange = simpanData;
+
+        const inputMasuk = document.createElement("input");
+        inputMasuk.value = simpanan[i]?.masuk || "";
+        inputMasuk.oninput = simpanData;
+
+        const inputKeluar = document.createElement("input");
+        inputKeluar.value = simpanan[i]?.keluar || "";
+        inputKeluar.oninput = simpanData;
+
+        const inputBiaya = document.createElement("input");
+        inputBiaya.value = simpanan[i]?.biaya || "";
+        inputBiaya.readOnly = true;
+
+        const btnHitung = document.createElement("button");
+        btnHitung.textContent = "Hitung";
+        btnHitung.onclick = () => {
+          inputKeluar.value = waktuSekarang();
+          const durasi = hitungDurasi(inputMasuk.value, inputKeluar.value);
+          const biaya = hitungBiaya(selectJenis.value, durasi);
+          inputBiaya.value = biaya;
+          simpanData();
+        };
+
+        const btnHapus = document.createElement("button");
+        btnHapus.textContent = "Hapus";
+        btnHapus.onclick = () => {
+          inputPlat.value = "";
+          inputMasuk.value = "";
+          inputKeluar.value = "";
+          inputBiaya.value = "";
+          simpanData();
+        };
+
+        row.insertCell().appendChild(inputPlat);
+        row.insertCell().appendChild(selectJenis);
+        row.insertCell().appendChild(inputMasuk);
+        row.insertCell().appendChild(inputKeluar);
+        row.insertCell().appendChild(inputBiaya);
+
+        const aksiCell = row.insertCell();
+        aksiCell.appendChild(btnHitung);
+        aksiCell.appendChild(btnHapus);
+      }
+    }
+
+    function hapusSemua() {
+      if (confirm("Yakin ingin hapus semua data?")) {
+        localStorage.removeItem("dataParkir");
+        location.reload();
+      }
+    }
+
+    loadData();
+  </script>
+</body>
+</html>
